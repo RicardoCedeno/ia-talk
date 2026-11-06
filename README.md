@@ -1,10 +1,10 @@
 # Pip: agente con IA en un mundo 3D
 
-Angular 22 + Three.js. Dos personajes hechos con formas básicas viven en un claro del bosque; el "cerebro" de cada uno es `gpt-4o-mini`, que elige una acción cada vez mediante tool calling. Pueden conversar, regalarse manzanas y pelearse.
+Angular 22 + Three.js. Dos personajes hechos con formas básicas viven en un claro del bosque; el "cerebro" de cada uno es un LLM (`deepseek-flash`, `gpt-4o-mini` o `gemini-3.5-flash`), que elige una acción cada vez mediante tool calling. Pueden conversar, regalarse manzanas y pelearse.
 
 ## Arrancar
 
-1. Copia `src/environments/environment.local.example.ts` como `environment.local.ts` y pon tu API key (ese archivo está en `.gitignore`).
+1. Copia `src/environments/environment.local.example.ts` como `environment.local.ts` (está en `.gitignore`), elige el proveedor (`LLM_PROVIDER`: `'deepseek'` con `deepseek-flash`, `'openai'` con `gpt-4o-mini` o `'gemini'` con `gemini-3.5-flash`) y pon su API key. Con el nivel gratuito de Gemini deja `LLM_MAX_REQUESTS_PER_MINUTE = 5`; súbelo si activas la facturación.
 2. `npm install`
 3. `npm start` y abre http://localhost:4200
 

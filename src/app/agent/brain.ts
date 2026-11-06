@@ -8,7 +8,6 @@ import { relationLabel, SHOUT_DISTANCE, TALK_DISTANCE } from './social';
 import { ChatResponse, OpenAiError, OpenAiService } from '../core/openai.service';
 import { TYPE_NAMES } from '../world/entities';
 
-const MODEL = 'gpt-4o-mini';
 /** Tiempo mínimo entre el inicio de dos decisiones. */
 const MIN_CYCLE_MS = 2500;
 const MAX_CALLS_PER_MINUTE = 20;
@@ -135,7 +134,7 @@ export interface BrainHooks {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-/** Bucle de decisión de un personaje: observa, pregunta a gpt-4o-mini y ejecuta la acción. */
+/** Bucle de decisión de un personaje: observa, pregunta al modelo y ejecuta la acción. */
 export class Brain {
   private loopToken = 0;
   private busy = false;
@@ -276,7 +275,7 @@ export class Brain {
 
       const validAbout = new Set(['yo', 'mundo', ...others.map((o) => o.id)]);
       // Solo lo que de verdad importa: el modelo tiende a apuntar cada frase como "recuerdo".
-      const worthKeeping = result.recuerdos
+      const worthKeeping = (result.recuerdos ?? [])
         .filter((r) => r.importancia >= MIN_MEMORY_IMPORTANCE)
         .sort((a, b) => b.importancia - a.importancia)
         .slice(0, MAX_MEMORIES_PER_REFLECTION);
@@ -284,7 +283,7 @@ export class Brain {
         const about = validAbout.has(r.sobre) ? r.sobre : 'mundo';
         if (memory.add(about, r.texto, r.importancia)) this.hooks.log('memory', `Recuerda: ${r.texto}`);
       }
-      for (const o of result.opiniones) {
+      for (const o of result.opiniones ?? []) {
         const other = social.agent(o.id);
         if (!other || other === agent) continue;
         memory.opinions.set(o.id, o.opinion.slice(0, 160));
@@ -294,8 +293,8 @@ export class Brain {
           this.hooks.log('memory', `Opina de ${other.name}: ${o.opinion} (${delta > 0 ? '+' : ''}${delta})`);
         }
       }
-      memory.noteTopics(result.temas_hablados);
-      if (result.proximos_temas.length) memory.nextTopics = result.proximos_temas.slice(0, 4);
+      memory.noteTopics(result.temas_hablados ?? []);
+      if (result.proximos_temas?.length) memory.nextTopics = result.proximos_temas.slice(0, 4);
       this.hooks.memoryChanged();
     } catch {
       // Si falla, se reintentará con la siguiente tanda de sucesos.
@@ -379,7 +378,6 @@ export class Brain {
       this.hooks.thinking(true);
       try {
         res = await this.openai.chat({
-          model: MODEL,
           messages: [
             {
               role: 'system',
@@ -448,11 +446,21 @@ export class Brain {
       if (!(result.ok && speech)) this.hooks.log(result.ok ? 'result' : 'fail', result.message);
       return true;
     } catch (e) {
-      const message =
-        e instanceof OpenAiError ? `OpenAI ${e.status}: ${e.message}` : `Error: ${String(e)}`;
+      const dailyQuota = e instanceof OpenAiError && e.code === 'daily_quota';
+      const message = dailyQuota
+        ? `Se ha agotado la cuota diaria de ${this.openai.model}. Espera a que se renueve, activa la ` +
+          'facturación en Google AI Studio o cambia de modelo o proveedor en environment.local.ts.'
+        : e instanceof OpenAiError
+          ? `API ${e.status}: ${e.message}`
+          : `Error: ${String(e)}`;
       this.hooks.log('error', message);
       const fatal =
-        e instanceof OpenAiError && (e.status === 401 || e.code === 'insufficient_quota');
+        e instanceof OpenAiError &&
+        (dailyQuota ||
+          e.status === 401 ||
+          e.status === 403 ||
+          e.code === 'insufficient_quota' ||
+          /api key/i.test(e.message));
       if (fatal) {
         this.stop();
         this.hooks.fatal(message);
@@ -612,7 +620,6 @@ export class Brain {
     const old = this.events.splice(0, SUMMARY_CHUNK);
     try {
       const res = await this.openai.chat({
-        model: MODEL,
         temperature: 0.3,
         max_completion_tokens: 220,
         messages: [

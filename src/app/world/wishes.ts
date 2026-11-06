@@ -5,7 +5,6 @@ import { Entity } from './entities';
 import { Marvel, MarvelSystem } from './marvels';
 import { World } from './world';
 
-const MODEL = 'gpt-4o-mini';
 /** Segundos mínimos entre dos deseos del mismo personaje. */
 export const WISH_COOLDOWN = 45;
 /** Máximo de objetos deseados a la vez; el más antiguo se desvanece. */
@@ -220,12 +219,13 @@ const DESIGN_SCHEMA = object({
   },
 });
 
-/** Pide a gpt-4o-mini que diseñe el objeto deseado con piezas primitivas. */
+/** Pide al modelo que diseñe el objeto deseado con piezas primitivas. */
 async function designObject(openai: OpenAiService, wisher: Agent, wish: string, twist: boolean, host: WishHost) {
   const res = await openai.chat({
-    model: MODEL,
     temperature: 0.8,
-    max_completion_tokens: 1000,
+    // Diseñar en 3D sin ver el resultado sale mejor si piensa un poco antes.
+    reasoning_effort: 'low',
+    max_completion_tokens: 1500,
     messages: [
       {
         role: 'system',
@@ -253,9 +253,17 @@ efecto_mecanico: sacia_hambre si es comida, sacia_sed si es bebida, levitar si s
     response_format: { type: 'json_schema', json_schema: { name: 'objeto', strict: true, schema: DESIGN_SCHEMA } },
   });
   if (res.usage) host.usage(res.usage.prompt_tokens, res.usage.completion_tokens);
-  const design = JSON.parse(res.choices[0]?.message.content ?? '{}') as Design;
+  const design = JSON.parse(res.choices[0]?.message.content ?? '{}') as Partial<Design>;
   if (!design.piezas?.length) throw new Error('diseño vacío');
-  return design;
+  // Sin esquema estricto (p. ej. DeepSeek) podría faltar algún texto.
+  return {
+    nombre: design.nombre || wish,
+    descripcion_visible: design.descripcion_visible ?? '',
+    detalle_al_examinar: design.detalle_al_examinar ?? 'No ves nada más de especial.',
+    efecto_al_tocar: design.efecto_al_tocar ?? 'Lo tocas. Es real.',
+    efecto_mecanico: EFFECTS.includes(design.efecto_mecanico as Effect) ? (design.efecto_mecanico as Effect) : 'ninguno',
+    piezas: design.piezas.filter((p) => SHAPES.includes(p.forma)),
+  };
 }
 
 /** Detecta deseos en lo que dicen los personajes y hace aparecer lo deseado. */

@@ -2,8 +2,6 @@ import { CharacterCard } from './memory';
 import { CharacterProfile } from './profile';
 import { ChatRequest, OpenAiService } from '../core/openai.service';
 
-const MODEL = 'gpt-4o-mini';
-
 type Usage = (input: number, output: number) => void;
 
 const str = { type: 'string' };
@@ -13,8 +11,8 @@ function object(properties: Record<string, unknown>) {
   return { type: 'object', properties, required: Object.keys(properties), additionalProperties: false };
 }
 
-async function askJson<T>(openai: OpenAiService, request: Omit<ChatRequest, 'model'>, onUsage: Usage): Promise<T> {
-  const res = await openai.chat({ model: MODEL, ...request });
+async function askJson<T>(openai: OpenAiService, request: ChatRequest, onUsage: Usage): Promise<T> {
+  const res = await openai.chat(request);
   if (res.usage) onUsage(res.usage.prompt_tokens, res.usage.completion_tokens);
   return JSON.parse(res.choices[0]?.message.content ?? '{}') as T;
 }
@@ -66,11 +64,12 @@ export async function generateCard(
   );
   return {
     source: profileSource(profile),
-    interests: data.intereses.slice(0, 5),
-    quirks: data.manias.slice(0, 3),
-    speech: data.forma_de_hablar,
-    backstory: data.historia,
-    secret: data.secreto,
+    // Sin esquema estricto (p. ej. DeepSeek) podría faltar algún campo.
+    interests: (data.intereses ?? []).slice(0, 5),
+    quirks: (data.manias ?? []).slice(0, 3),
+    speech: data.forma_de_hablar ?? '',
+    backstory: data.historia ?? '',
+    secret: data.secreto ?? '',
   };
 }
 

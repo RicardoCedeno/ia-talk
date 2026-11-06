@@ -1,7 +1,7 @@
 <aside class="hud">
   <header>
     <h1>Claro del bosque</h1>
-    <span class="model">gpt-4o-mini</span>
+    <span class="model">{{ sim.modelName }}</span>
   </header>
 
   @if (!sim.hasApiKey) {
@@ -95,7 +95,10 @@
 
   <p class="usage">
     Cofre: {{ sim.chestApples() }} 🍎 · {{ sim.usage().calls }} llamadas ·
-    {{ sim.usage().input + sim.usage().output | number }} tokens · ~US${{ sim.cost() | number: '1.4-4' }}
+    {{ sim.usage().input + sim.usage().output | number }} tokens
+    @if (sim.cost(); as cost) {
+      · ~US${{ cost | number: '1.4-4' }}
+    }
   </p>
 
   <section class="log">

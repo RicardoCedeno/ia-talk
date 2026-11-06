@@ -40,9 +40,6 @@ import { MarvelSystem } from './world/marvels';
 import { WishSystem } from './world/wishes';
 import { World } from './world/world';
 
-// Precio de gpt-4o-mini en USD por millón de tokens.
-const PRICE_INPUT = 0.15;
-const PRICE_OUTPUT = 0.6;
 const MAX_LOG = 120;
 const SENSE_INTERVAL = 0.25;
 const SPAWN_POINTS = [
@@ -104,6 +101,7 @@ interface Character {
 export class SimulationService {
   private readonly openai = inject(OpenAiService);
   readonly hasApiKey = this.openai.hasKey;
+  readonly modelName = this.openai.model;
 
   readonly phase = signal<'setup' | 'running'>('setup');
   readonly setup = signal<SimulationSetup>(loadSetup());
@@ -112,10 +110,8 @@ export class SimulationService {
   readonly log = signal<LogEntry[]>([]);
   readonly brainRunning = signal(false);
   readonly usage = signal({ calls: 0, input: 0, output: 0 });
-  readonly cost = computed(() => {
-    const u = this.usage();
-    return (u.input * PRICE_INPUT + u.output * PRICE_OUTPUT) / 1e6;
-  });
+  /** Coste estimado en USD (con caché y tarifa por horas), o null si no se conoce la tarifa del modelo. */
+  readonly cost = this.openai.spent.asReadonly();
   readonly debug = signal(false);
   readonly follow = signal(true);
   readonly fatal = signal<string | null>(null);

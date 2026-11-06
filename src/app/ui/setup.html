@@ -3,7 +3,7 @@
     <header>
       <h1>Crea a los personajes</h1>
       <p>
-        Describe con tus palabras cómo es cada uno y qué le gusta. gpt-4o-mini lo usará para decidir qué hacen y
+        Describe con tus palabras cómo es cada uno y qué le gusta. {{ sim.modelName }} lo usará para decidir qué hacen y
         cómo hablan. Si sus personalidades chocan, acabarán discutiendo.
       </p>
     </header>
@@ -107,7 +107,7 @@
           Los deseos se cumplen 🪄
         </label>
       </div>
-      <span class="note">Con dos personajes se hacen unas 2 llamadas cada pocos segundos (≈ US$0,08 cada 5 min).</span>
+      <span class="note">Cada personaje llama a la API ({{ sim.modelName }}) cada pocos segundos.</span>
       @if (error(); as message) {
         <span class="error">{{ message }}</span>
       }
