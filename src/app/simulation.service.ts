@@ -114,6 +114,7 @@ export class SimulationService {
   readonly cost = this.openai.spent.asReadonly();
   readonly debug = signal(false);
   readonly follow = signal(true);
+  readonly subtitles = signal(true);
   readonly fatal = signal<string | null>(null);
   /** Si los objetos imposibles están ahora mismo en el claro. */
   readonly marvelsVisible = signal(false);
@@ -262,6 +263,10 @@ export class SimulationService {
 
   toggleFollow(): void {
     this.follow.update((v) => !v);
+  }
+
+  toggleSubtitles(): void {
+    this.subtitles.update((v) => !v);
   }
 
   /** Hace aparecer o desaparecer los objetos imposibles en plena partida. */

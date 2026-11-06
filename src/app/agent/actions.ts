@@ -137,7 +137,10 @@ function otherCharacter(ctx: ActionContext, id: string): Agent | string {
   return other;
 }
 
-const speechSeconds = (line: string) => Math.min(6, 1.8 + line.length * 0.045);
+/** Lo que dura el gesto de hablar; después el personaje sigue con lo suyo. */
+const talkSeconds = (line: string) => Math.min(6, 1.5 + line.length / 30);
+/** Lo que se queda el globo en pantalla: lo que se tarda en leerlo con calma (~14 letras/s). */
+const readingSeconds = (line: string) => Math.min(15, Math.max(3, 2 + line.length / 14));
 
 /** Comprueba que la frase no se repite y la apunta. Devuelve un error si ya la dijo. */
 function checkNewLine(agent: Agent, line: string): string | null {
@@ -172,8 +175,8 @@ function* speakTo(ctx: ActionContext, id: string, text: string, tone: Tone, shou
   if (repeated) return fail(repeated);
 
   if (agent.known.has(id)) yield* turnTowards(agent, other.position);
-  const seconds = speechSeconds(line);
-  agent.body.speak(line, seconds + 1, tone, shout);
+  const seconds = talkSeconds(line);
+  agent.body.speak(line, readingSeconds(line), tone, shout);
   agent.body.setAnim(shout ? 'shout' : 'talk');
   social.speak(agent, other, line, tone, shout ? 'shout' : 'talk');
   try {
@@ -436,8 +439,8 @@ function* say(ctx: ActionContext, text: string): ActionGen {
   if (!line) return fail('No dijiste nada.');
   const repeated = checkNewLine(agent, line);
   if (repeated) return fail(repeated);
-  const seconds = speechSeconds(line);
-  agent.body.speak(line, seconds + 0.8);
+  const seconds = talkSeconds(line);
+  agent.body.speak(line, readingSeconds(line));
   agent.body.setAnim('talk');
   ctx.social.speak(agent, null, line, 'neutral', 'say');
   try {
