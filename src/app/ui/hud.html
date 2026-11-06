@@ -1,0 +1,119 @@
+<aside class="hud">
+  <header>
+    <h1>Claro del bosque</h1>
+    <span class="model">gpt-4o-mini</span>
+  </header>
+
+  @if (!sim.hasApiKey) {
+    <p class="alert">
+      Falta la API key. Crea <code>src/environments/environment.local.ts</code> a partir del archivo
+      <code>.example</code>.
+    </p>
+  }
+  @if (sim.fatal(); as message) {
+    <p class="alert">{{ message }}</p>
+  }
+
+  @for (c of sim.characters(); track c.id; let i = $index) {
+    <section
+      class="character"
+      [class.selected]="i === sim.selected()"
+      [style.--c]="c.color"
+      (click)="sim.select(i)"
+    >
+      <h2>
+        <span class="dot"></span>{{ c.name }}
+        @if (c.angry) {
+          <span class="mood">💢 de pelea</span>
+        }
+        @if (c.thinking) {
+          <span class="thinking">pensando…</span>
+        }
+      </h2>
+      <div class="needs">
+        <span>Hambre</span>
+        <div class="bar"><div class="fill hunger" [style.width.%]="c.hunger"></div></div>
+        <span class="value">{{ c.hunger }}</span>
+        <span>Sed</span>
+        <div class="bar"><div class="fill thirst" [style.width.%]="c.thirst"></div></div>
+        <span class="value">{{ c.thirst }}</span>
+      </div>
+      <p class="thought">{{ c.thought }}</p>
+      <dl>
+        <dt>Acción</dt>
+        <dd>{{ c.action }}</dd>
+        <dt>Manos</dt>
+        <dd>{{ c.holding ?? 'nada' }}</dd>
+        @if (c.powers.length) {
+          <dt>Poderes</dt>
+          <dd class="powers">✨ {{ c.powers.join(', ') }}{{ c.levitating ? ' (flotando)' : '' }}</dd>
+        }
+        @for (r of c.relations; track r.name) {
+          <dt>Con {{ r.name }}</dt>
+          <dd>
+            <span class="relation" [attr.data-label]="r.label">{{ r.label }}</span> ({{ r.affinity }})
+          </dd>
+        }
+      </dl>
+      <details class="memory" (click)="$event.stopPropagation()">
+        <summary>🧠 Memoria ({{ c.memory.items.length }})</summary>
+        @if (c.memory.interests.length) {
+          <p><b>Le apasiona:</b> {{ c.memory.interests.join(', ') }}</p>
+        }
+        @for (o of c.memory.opinions; track o.name) {
+          <p><b>Opina de {{ o.name }}:</b> {{ o.text }}</p>
+        }
+        @if (c.memory.nextTopics.length) {
+          <p><b>Quiere hablar de:</b> {{ c.memory.nextTopics.join('; ') }}</p>
+        }
+        <ul>
+          @for (m of c.memory.items; track $index) {
+            <li [class.old]="m.old">{{ m.text }}</li>
+          } @empty {
+            <li class="old">Aún no recuerda nada especial.</li>
+          }
+        </ul>
+      </details>
+    </section>
+  }
+
+  <section class="controls">
+    <button class="primary" type="button" (click)="sim.toggleBrain()" [disabled]="!sim.hasApiKey">
+      {{ sim.brainRunning() ? '⏸ Pausar IA' : '▶ Reanudar IA' }}
+    </button>
+    <button type="button" (click)="sim.step()" [disabled]="!sim.hasApiKey || sim.brainRunning() || sim.anyThinking()">
+      Pensar 1 paso
+    </button>
+    <button type="button" (click)="sim.resetWorld()">Reiniciar</button>
+    <button type="button" (click)="sim.editCharacters()">Editar personajes</button>
+    <button type="button" (click)="sim.toggleMarvels()">
+      {{ sim.marvelsVisible() ? 'Ocultar objetos raros' : '✨ Mostrar objetos raros' }}
+    </button>
+    <label><input type="checkbox" [checked]="sim.debug()" (change)="sim.toggleDebug()" /> Depuración</label>
+    <label><input type="checkbox" [checked]="sim.follow()" (change)="sim.toggleFollow()" /> Seguir</label>
+  </section>
+
+  <p class="usage">
+    Cofre: {{ sim.chestApples() }} 🍎 · {{ sim.usage().calls }} llamadas ·
+    {{ sim.usage().input + sim.usage().output | number }} tokens · ~US${{ sim.cost() | number: '1.4-4' }}
+  </p>
+
+  <section class="log">
+    <h3>Registro</h3>
+    <ol>
+      @for (entry of sim.log(); track entry.id) {
+        <li [class]="entry.kind + (entry.tone ? ' tone-' + entry.tone : '')">
+          <time>{{ entry.time }}s</time>
+          @if (entry.who) {
+            <b [style.color]="entry.color">{{ entry.who }}</b>
+          }
+          {{ entry.text }}
+        </li>
+      }
+    </ol>
+  </section>
+
+  @if (!sim.brainRunning()) {
+    <p class="hint">Con la IA en pausa, elige un personaje y haz clic en el suelo o en un objeto para moverlo.</p>
+  }
+</aside>

@@ -1,0 +1,117 @@
+<div class="backdrop">
+  <form class="setup" (submit)="$event.preventDefault(); start()">
+    <header>
+      <h1>Crea a los personajes</h1>
+      <p>
+        Describe con tus palabras cómo es cada uno y qué le gusta. gpt-4o-mini lo usará para decidir qué hacen y
+        cómo hablan. Si sus personalidades chocan, acabarán discutiendo.
+      </p>
+    </header>
+
+    @if (!sim.hasApiKey) {
+      <p class="alert">
+        Falta la API key: los personajes no pensarán por sí solos (solo podrás moverlos a mano).
+      </p>
+    }
+
+    <div class="cards">
+      @for (c of draft().characters; track $index; let i = $index) {
+        <fieldset class="card" [style.--c]="c.color">
+          <legend>Personaje {{ i + 1 }}</legend>
+
+          <div class="presets">
+            <span>Ejemplos:</span>
+            @for (p of presets; track p.name) {
+              <button type="button" class="chip" [style.--c]="p.color" (click)="applyPreset(i, p)">
+                {{ p.name }}
+              </button>
+            }
+          </div>
+
+          <div class="row">
+            <label class="grow">
+              Nombre
+              <input
+                type="text"
+                [value]="c.name"
+                [maxLength]="limits.name"
+                (input)="update(i, 'name', $any($event.target).value)"
+              />
+            </label>
+            <label>
+              Color
+              <input type="color" [value]="c.color" (input)="update(i, 'color', $any($event.target).value)" />
+            </label>
+          </div>
+
+          <label>
+            Personalidad
+            <textarea
+              rows="4"
+              [value]="c.personality"
+              [maxLength]="limits.personality"
+              placeholder="Ej.: tímido, muy educado, se pone nervioso si le gritan…"
+              (input)="update(i, 'personality', $any($event.target).value)"
+            ></textarea>
+            <small>{{ c.personality.length }}/{{ limits.personality }}</small>
+          </label>
+
+          <label>
+            Gustos y preferencias
+            <textarea
+              rows="3"
+              [value]="c.preferences"
+              [maxLength]="limits.preferences"
+              placeholder="Ej.: adora las manzanas, odia mojarse, quiere el cofre para él…"
+              (input)="update(i, 'preferences', $any($event.target).value)"
+            ></textarea>
+            <small>{{ c.preferences.length }}/{{ limits.preferences }}</small>
+          </label>
+
+          @if (storedMemories()[i] && draft().keepMemories !== false) {
+            <p class="remembers">🧠 Recuerda {{ storedMemories()[i] }} cosas de partidas anteriores.</p>
+          }
+        </fieldset>
+      }
+    </div>
+
+    <footer>
+      <label class="relation">
+        Relación al empezar
+        <select (change)="setRelation($any($event.target).value)">
+          @for (r of relations; track r.value) {
+            <option [value]="r.value" [selected]="r.value === draft().relation">{{ r.label }}</option>
+          }
+        </select>
+      </label>
+      <div class="memory-options">
+        <label class="check">
+          <input
+            type="checkbox"
+            [checked]="draft().keepMemories !== false"
+            (change)="setKeepMemories($any($event.target).checked)"
+          />
+          Recordar partidas anteriores
+        </label>
+        <button type="button" class="link" (click)="clearMemories()">Borrar todos los recuerdos</button>
+        <label class="check">
+          <input type="checkbox" [checked]="!!draft().marvels" (change)="setMarvels($any($event.target).checked)" />
+          Mostrar objetos imposibles ✨
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            [checked]="draft().wishes !== false"
+            (change)="setWishes($any($event.target).checked)"
+          />
+          Los deseos se cumplen 🪄
+        </label>
+      </div>
+      <span class="note">Con dos personajes se hacen unas 2 llamadas cada pocos segundos (≈ US$0,08 cada 5 min).</span>
+      @if (error(); as message) {
+        <span class="error">{{ message }}</span>
+      }
+      <button type="submit" class="primary" [disabled]="!!error()">▶ Empezar simulación</button>
+    </footer>
+  </form>
+</div>
